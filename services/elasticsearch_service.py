@@ -1,6 +1,5 @@
 from repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
-from models.elasticsearch_model import ElasticsearchSourceConfig
 
 
 class ElasticsearchService() : 
