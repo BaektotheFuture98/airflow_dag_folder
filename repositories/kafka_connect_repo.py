@@ -8,4 +8,4 @@ class KafkaConnectRepo:
         커넥터 생성
         :param config: 커넥터 설정파일
         '''
-        return self.client.create_connector(config)
+        

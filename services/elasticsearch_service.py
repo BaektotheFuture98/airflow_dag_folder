@@ -1,19 +1,20 @@
+from repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
 from models.elasticsearch_model import ElasticsearchSourceConfig
 
-chunk_size = 100000
-today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
 
-def data_chunks_check(index: str, query: dict, es_config: ElasticsearchSourceConfig) -> int : 
-    from repositories.elasticsearch_repo import ElasticsearchRepo
-    es_repo = ElasticsearchRepo(
-        hosts = list(es_config.hosts),
-        basic_auth = (es_config.user, es_config.password)
-    )
+class ElasticsearchService() : 
+    
+    def __init__(self, elasticsearchRepo : ElasticsearchRepo) : 
+        self.client = elasticsearchRepo
+        self.chunk_size = 100000
+        self.today_str = datetime.now(timezone.utc).strftime("%Y%m%d")
 
-    total_count = es_repo._count(index = index, query = query)
-    num_chunks = (total_count // chunk_size) + (1 if total_count % chunk_size > 0 else 0)
-
-    if num_chunks == 0 : num_chunks = 1
-
-    return num_chunks
+    def get_chunk_count(self, index: str, query: dict) -> int : 
+        total_count = self.client.count(index = index, query = query)
+        num_chunks = (total_count // self.chunk_size) + (1 if total_count % self.chunk_size > 0 else 0)
+        if num_chunks == 0 : num_chunks = 1
+        return num_chunks
+    
+    def search(self, index : str, query : str) : 
+        return self.client.search(index=index, query=query)

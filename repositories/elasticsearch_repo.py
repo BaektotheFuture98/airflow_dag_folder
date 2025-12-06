@@ -5,11 +5,11 @@ class ElasticsearchRepo:
         from airflow.providers.elasticsearch.hooks.elasticsearch import ElasticsearchPythonHook
         self.hook = ElasticsearchPythonHook(hosts = hosts, es_conn_args={"basic_auth": basic_auth})
 
-    def _count(self, index:str, query:dict) -> int: 
+    def count(self, index:str, query:dict) -> int: 
         res = self.hook.get_conn.count(index = index, body = query)
         return res.get("count")
     
-    def _search(self, index:str, query:dict, size:int=200) -> List[dict]:
+    def search(self, index:str, query:dict, size:int=200) -> List[dict]:
         res = self.hook.search(index = index, body = query, size = size)   
         sesarch_after = "", 
         result = res.get("hits", {}).get("hits", [])
