@@ -70,14 +70,14 @@ def create_jdbc_sink_connector(info: Dict[str, Any]) -> Dict[str, Any] :
     kafka_connect_repo = KafkaConnectRepo(Variable.get("KAFKA_CONNECT"))
     kafka_connect_service = KafkaConnectService(kafka_connect_repo)
 
-    mysql_config = info.get("mysql_config")
-
-    kafka_connect_service.create_connector(
+    conn_topic_list = kafka_connect_service.create_connector(
         chunks = info.get("chunks"),
-        build_jdbc_sink_config = info.get("jdbc_sink_config")
+        service_name=info.get("project_name"),
+        mysql_config = info.get("mysql_config")
     )
-
-
+    
+    info["conn_topic_list"] = conn_topic_list
+    return info
 
 @task(doc_md = "Elasticsearch 데이터 조회 및 전송")
 def search_and_publish_elasticsearch(info: Dict[str, Any]) -> List[str, Any] : 
@@ -90,9 +90,10 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> List[str, Any] :
     es_source_config = info.get("es_source_config")
     schema_version = info.get("schema_version")
     
-
+    from confluent_kafka import SerializingProducer
     from confluent_kafka.schema_registry.avro import AvroSerializer
     from confluent_kafka.schema_registry import record_subject_name_strategy
+    
     avro_serializer = AvroSerializer(
         schema_registry_client = schema_service.get_client(),
         schema_str = None, 
@@ -103,6 +104,14 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> List[str, Any] :
         }
     )
 
+    kafka_producer = SerializingProducer(
+        {
+            "bootstrap.servers" : "192.168.125.24:9092",
+            "security.protocol" : "plaintext", 
+            "value.serializer" : avro_serializer
+        }
+    )
+    
     from repositories.elasticsearch_repo import ElasticsearchRepo
     from services.elasticsearch_service import ElasticsearchService
     es_repo = ElasticsearchRepo(
@@ -110,8 +119,18 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> List[str, Any] :
             basic_auth=(es_source_config.get("user"), es_source_config.get("password"))
         )
     es_service = ElasticsearchService(es_repo)
-    es_search = es_service.search(
-            index = es_source_config.get("index"), 
-            query = es_source_config.get("query"), 
-            search_after = ""
-        )
+    
+    
+    
+    search_after = ""
+    while(True) : 
+        es_search = es_service.search(
+                index = es_source_config.get("index"), 
+                query = es_source_config.get("query"), 
+                search_after = search_after
+            )
+    
+        if len(es_search) == 0 : 
+            break
+        
+        
