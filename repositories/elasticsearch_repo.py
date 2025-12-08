@@ -1,16 +1,17 @@
-from typing import List
+from typing import List, Tuple, Optional
 
 class ElasticsearchRepo: 
-    def __init__(self, hosts:List[str], basic_auth:tuple): 
+    def __init__(self, hosts: List[str], basic_auth: Tuple[str, str]): 
         from airflow.providers.elasticsearch.hooks.elasticsearch import ElasticsearchPythonHook
         self.hook = ElasticsearchPythonHook(hosts = hosts, es_conn_args={"basic_auth": basic_auth})
 
     def count(self, index:str, query:dict) -> int: 
-        res = self.hook.get_conn.count(index = index, body = query)
+        conn = self.hook.get_conn()
+        res = conn.count(index=index, query=query)
         return res.get("count")
     
     def search(self, index:str, query:dict, size:int=200) -> List[dict]:
-        res = self.hook.search(index = index, body = query, size = size)   
-        sesarch_after = "", 
+        conn = self.hook.get_conn()
+        res = conn.search(index=index, query=query, size=size)
         result = res.get("hits", {}).get("hits", [])
-        return sesarch_after, result
+        return result
