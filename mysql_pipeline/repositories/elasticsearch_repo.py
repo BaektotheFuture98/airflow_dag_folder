@@ -1,4 +1,6 @@
 from typing import Tuple, List
+from mysql_pipeline.config.logger import get_logger
+log = get_logger(__name__)
 
 class ElasticsearchRepo: 
     def __init__(self, hosts: str, basic_auth: Tuple[str, str]): 
