@@ -1,4 +1,4 @@
-from repositories.elasticsearch_repo import ElasticsearchRepo
+from mysql_pipeline.repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
 
 

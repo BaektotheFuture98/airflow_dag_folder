@@ -1,5 +1,5 @@
-from repositories.kafka_connect_repo import KafkaConnectRepo
-from models.build_models import build_jdbc_sink_config
+from mysql_pipeline.repositories.kafka_connect_repo import KafkaConnectRepo
+from mysql_pipeline.models.build_models import build_jdbc_sink_config
 from typing import List
 
 class KafkaConnectService() : 

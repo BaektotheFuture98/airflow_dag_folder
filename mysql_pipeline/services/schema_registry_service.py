@@ -1,4 +1,4 @@
-from repositories.schema_registry_repo import SchemaRegistryRepo
+from mysql_pipeline.repositories.schema_registry_repo import SchemaRegistryRepo
 
 class SchemaRegistryService : 
     def __init__(self, schema_registry : SchemaRegistryRepo) : 

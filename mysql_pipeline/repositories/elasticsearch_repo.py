@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 
 class ElasticsearchRepo: 
     def __init__(self, hosts: List[str], basic_auth: Tuple[str, str]): 
