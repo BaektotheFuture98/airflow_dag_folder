@@ -3,7 +3,7 @@ from airflow.sdk import dag
 
 # TaskFlow API tasks from core_tasks
 from mysql_pipeline.tasks.core_tasks import (
-	MySQLTrigger,
+	mySQLTrigger,
 	register_avro_schema,
 	create_jdbc_sink_connector,
 	search_and_publish_elasticsearch,
@@ -19,7 +19,7 @@ from mysql_pipeline.tasks.core_tasks import (
     """
 )
 def mysql_pipeline_dag():
-    mysql_trigger = MySQLTrigger()
+    mysql_trigger = mySQLTrigger()
     schema_info = register_avro_schema(mysql_trigger)
     jdbc_info = create_jdbc_sink_connector(schema_info)
     es_result = search_and_publish_elasticsearch(jdbc_info)

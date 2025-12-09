@@ -1,15 +1,15 @@
 from airflow.sdk import task, Variable
 from airflow.exceptions import AirflowFailException
-from typing import List, Dict, List, Any
+from typing import Dict, Any
 from mysql_pipeline.config.logger import get_logger
 
 log = get_logger(__name__)
 
 @task(doc_md="API 수신 완료, 설정 파일 구성")
-def MySQLTrigger(**kwargs) -> Dict[str, Any]:
+def mySQLTrigger(**kwargs) -> Dict[str, Any]:
     from mysql_pipeline.repositories.elasticsearch_repo import ElasticsearchRepo
     from mysql_pipeline.services.elasticsearch_service import ElasticsearchService
-    from mysql_pipeline.models.build_models import build_es_source_model, mysql_config
+    from mysql_pipeline.models.build_models import build_es_source_model, build_mysql_config
 
     dag_run = kwargs.get("dag_run")
     info = dag_run.conf if dag_run else {}
@@ -23,16 +23,16 @@ def MySQLTrigger(**kwargs) -> Dict[str, Any]:
     
     es_repo = ElasticsearchRepo(Variable.get("ELASTICSEARCH_HOSTS"), (Variable.get("ELASTICSEARCH_USER"), Variable.get("ELASTICSEARCH_PASSWORD")))
     es_service = ElasticsearchService(es_repo)
-    
     log.info("MySQLTrigger: Building ES source and MySQL configs")
+    
     es_source_config = build_es_source_model(
         project_name = info.get("project_name"),
         index = info.get("elasticsearch_index") if info.get("elasticsearch_index") else "",
-        fields =info.get("fields"),
-        query = info.get("query")
+        query = info.get("query"),
+        fields =info.get("fields")
     )
 
-    mysql_config = mysql_config(
+    mysql_config = build_mysql_config(
         database = info.get("mysql_db"),
         user = info.get("user"),
         password = info.get("password"),
@@ -63,11 +63,14 @@ def register_avro_schema(info: Dict[str, Any]) -> Dict[str, Any]:
     
     repo = SchemaRegistryRepo(Variable.get("SCHEMA_REGISTRY"))
     services = SchemaRegistryService(repo)
+    
     schema = build_avro_schema(project_name=project_name, fields=es_source_config.get("fields"))
     log.info(f"Schema: Registering Avro schema for project={project_name}")
+    
     latest_version = services.register_schema(project_name, schema)
     info["schema_version"] = latest_version
     log.info(f"Schema: Registered version={latest_version}")
+    
     return info
 
 @task(doc_md = "JdbcSinkConnector 생성")
@@ -121,7 +124,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     log.info("SearchPublish: Initializing Kafka producer")
     producer = SerializingProducer(
         {
-            "bootstrap.servers": Variable.get("KAFKA_BOOTSTRAP_SERVERS", default_var="192.168.125.24:9092"),
+            "bootstrap.servers": Variable.get("KAFKA_BOOTSTRAP_SERVERS"),
             "security.protocol": "plaintext",
             "value.serializer": avro_serializer,
         }
@@ -134,13 +137,13 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     log.info("SearchPublish: Initializing Elasticsearch repo/service")
     es_repo = ElasticsearchRepo(
         hosts=es_source_config.get("hosts", []),
-        basic_auth=(es_source_config.get("user", ""), es_source_config.get("password", "")),
+        basic_auth=(es_source_config.get("user"), es_source_config.get("password")),
     )
     es_service = ElasticsearchService(es_repo)
 
     # Publish loop with pagination and chunk topic boundaries
     index = es_source_config.get("index")
-    topic_list = info.get("conn_topic_list", [])
+    topic_list = info.get("conn_topic_list")
     chunk_size = 100000
     query = es_source_config.get("query")
     search_after = ""
@@ -157,7 +160,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
                     break
 
                 for hit in hits:
-                    record = hit.get("_source", {})
+                    record = hit.get("_source")
                     producer.produce(topic=topic, value=record)
 
                 # Update counters and pagination token
