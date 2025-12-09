@@ -11,7 +11,6 @@ class ElasticsearchRepo:
         return res.get("count")
     
     def search(self, index:str, query:dict, size:int=200) -> List[dict]:
-        conn = self.hook.get_conn()
-        res = conn.search(index=index, query=query, size=size)
+        res = self.hook.search(query=query, index=index)
         result = res.get("hits", {}).get("hits", [])
         return result

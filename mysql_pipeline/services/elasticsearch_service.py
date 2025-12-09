@@ -19,7 +19,7 @@ class ElasticsearchService() :
         query = self._query_with_pagination(query, self.pagination_size, search_after)
         return self.client.search(index=index, query=query)
     
-    def _query_with_pagination(self, query: dict, page_size: int, search_after) : 
+    def _query_with_pagination(self, query: str, page_size: int, search_after) : 
         paginated_query = {
             "size": page_size,
             "query": {
