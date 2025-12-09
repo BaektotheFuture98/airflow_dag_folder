@@ -6,7 +6,7 @@ class ElasticsearchRepo:
         self.hook = ElasticsearchPythonHook(hosts = hosts, es_conn_args={"basic_auth": basic_auth})
 
     def count(self, index:str, query:dict) -> int: 
-        conn = self.hook.get_conn()
+        conn = self.hook.get_conn
         res = conn.count(index=index, query=query)
         return res.get("count")
     
