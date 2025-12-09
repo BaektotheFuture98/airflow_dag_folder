@@ -10,7 +10,7 @@ import json
     MySQLTrigger Task 
 """
 def build_es_source_model(project_name: str, index: str, query: Dict, fields: List[str]) -> Dict:
-    hosts_str = Variable.get("ELASTICSEARCH_HOSTS", default_var="")
+    hosts_str = Variable.get("ELASTICSEARCH_HOSTS")
     hosts = [h.strip() for h in hosts_str.split(",") if h.strip()]
     return {
         "project_name": project_name,
@@ -54,7 +54,7 @@ def build_avro_schema(project_name: str, fields: List[str]) -> str:
     Create_jdbc_sink_connector Task
 """
 def build_jdbc_sink_config(name: str, mysql_conf: Dict[str, str]) -> Dict:
-    mysql_host = Variable.get("MYSQL_HOST", default_var="localhost:3306")
+    mysql_host = Variable.get("MYSQL_HOST")
     return _jdbc_sink_connector_config(
         name=name,
         mysql_host=mysql_host,
