@@ -2,7 +2,8 @@ import logging
 from typing import Optional
 
 
-DEFAULT_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+# DEFAULT_FORMAT = "%(asctime)s | %(levelname)s | %(name)s | %(message)s"
+DEFAULT_FORMAT = "%(name)s | %(message)s"
 DEFAULT_DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 

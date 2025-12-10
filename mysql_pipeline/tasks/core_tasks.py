@@ -33,14 +33,15 @@ def mySQLTrigger(**kwargs) -> Dict[str, Any]:
     )
 
     mysql_config = build_mysql_config(
-        database = info.get("mysql_db"),
+        host = info.get("host"),
+        database = info.get("database"),
         user = info.get("user"),
         password = info.get("password"),
-        table = info.get("mysql_table")
+        table = info.get("table")
     )
     
     chunks = es_service.get_chunk_count(
-        index = info.get("index"),
+        index = info.get("elasticsearch_index"),
         query = info.get("query")
     )
     log.info(f"MySQLTrigger: Calculated chunks={chunks}")
@@ -69,6 +70,7 @@ def register_avro_schema(info: Dict[str, Any]) -> Dict[str, Any]:
     
     latest_version = services.register_schema(project_name, schema)
     info["schema_version"] = latest_version
+    info["schema_str"] = schema
     log.info(f"Schema: Registered version={latest_version}")
     
     return info
@@ -105,20 +107,22 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
 
     es_source_config = info.get("es_source_config")
     schema_version = info.get("schema_version")
-
+    schema_name = info.get("project_name") + "-value"
+    latest_version = schema_service.get_schema_from_registry(schema_name)
     # Kafka producer with Avro serializer
     from confluent_kafka import SerializingProducer
+    # from confluent_kafka.schema_registry import record_subject_name_strategy
     from confluent_kafka.schema_registry.avro import AvroSerializer
-    from confluent_kafka.schema_registry import record_subject_name_strategy
+
 
     avro_serializer = AvroSerializer(
-        schema_registry_client=schema_service.get_client(),
-        schema_str=None,
-        config={
+        schema_registry_client=schema_service.get_client(), 
+        schema_str=latest_version.schema.schema_str,
+        conf={
             "auto.register.schemas": False,
             "use.schema.id": schema_version,
-            "subject.name.strategy": record_subject_name_strategy,
-        },
+            # "subject.name.strategy": record_subject_name_strategy
+        }
     )
 
     log.info("SearchPublish: Initializing Kafka producer")
@@ -126,7 +130,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
         {
             "bootstrap.servers": Variable.get("KAFKA_BOOTSTRAP_SERVERS"),
             "security.protocol": "plaintext",
-            "value.serializer": avro_serializer,
+            "value.serializer": avro_serializer
         }
     )
 
@@ -135,15 +139,14 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     from mysql_pipeline.services.elasticsearch_service import ElasticsearchService
 
     log.info("SearchPublish: Initializing Elasticsearch repo/service")
-    es_repo = ElasticsearchRepo(
-        hosts=es_source_config.get("hosts", []),
-        basic_auth=(es_source_config.get("user"), es_source_config.get("password")),
-    )
+    es_repo = ElasticsearchRepo(Variable.get("ELASTICSEARCH_HOSTS"), (Variable.get("ELASTICSEARCH_USER"), Variable.get("ELASTICSEARCH_PASSWORD")))
     es_service = ElasticsearchService(es_repo)
+    
 
     # Publish loop with pagination and chunk topic boundaries
     index = es_source_config.get("index")
     topic_list = info.get("conn_topic_list")
+    fields = es_source_config.get("fields")
     chunk_size = 100000
     query = es_source_config.get("query")
     search_after = ""
@@ -154,13 +157,17 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
             sent_in_topic = 0
             log.info(f"SearchPublish: Processing topic={topic}")
             while True:
-                hits = es_service.search(index=index, query=query, search_after=search_after)
+                hits = es_service.search(index=index, fields=fields, query=query, search_after=search_after)
+                log.info(f"SearchPublish: Retrieved hits={hits} search_after={search_after}")
                 if not hits:
                     log.info("SearchPublish: No more hits, break")
                     break
 
                 for hit in hits:
                     record = hit.get("_source")
+                    if record.get("an_content") == '' or record.get("an_content") is None:
+                        record["an_content"] = " "
+
                     producer.produce(topic=topic, value=record)
 
                 # Update counters and pagination token

@@ -11,4 +11,4 @@ class SchemaRegistryService :
         return self.sr.register_schema(schema_subject, schema_str)
     
     def get_client(self) : 
-        return self.sr.schema_registry_client
+        return self.sr.schema_registry_client()

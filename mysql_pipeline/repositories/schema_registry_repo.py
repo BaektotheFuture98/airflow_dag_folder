@@ -11,7 +11,7 @@ class SchemaRegistryRepo:
     def register_schema(self, subject_name: str, avro_schema_str: str) -> int :
         sr = self.client
         schema = Schema(schema_str=avro_schema_str, schema_type="AVRO")
-        schema_id = sr.register_schema(subject_name, schema)
+        schema_id = sr.register_schema(subject_name+"-value", schema)
         return schema_id
 
     def get_schema_from_registry(self, subject: str) : 

@@ -22,8 +22,9 @@ def build_es_source_model(project_name: str, index: str, query: Dict, fields: Li
         "password": Variable.get("ELASTICSEARCH_PASSWORD"),
     }
     
-def build_mysql_config(database: str, user: str, password: str, table: str | None = None) -> Dict[str, str]:
+def build_mysql_config(host:str, database: str, user: str, password: str, table: str | None = None) -> Dict[str, str]:
     return {
+        "host": host,
         "database": database,
         "user": user,
         "password": password,
@@ -37,13 +38,12 @@ def build_mysql_config(database: str, user: str, password: str, table: str | Non
 def build_avro_schema(project_name: str, fields: List[str]) -> str:
     avro_fields = []
     for field_name in fields:
-        field_type = "int" if ("in" in field_name) else ["string", "null"]
+        field_type = "int" if ("in" in field_name) else "string"
         avro_fields.append({"name": field_name, "type": field_type})
 
     data_schema = {
         "type": "record",
         "name": project_name,
-        "namespace": "auto.pipeline",
         "fields": avro_fields,
     }
     return json.dumps(data_schema)
@@ -54,10 +54,9 @@ def build_avro_schema(project_name: str, fields: List[str]) -> str:
     Create_jdbc_sink_connector Task
 """
 def build_jdbc_sink_config(name: str, mysql_conf: Dict[str, str]) -> Dict:
-    mysql_host = Variable.get("MYSQL_HOST")
     return _jdbc_sink_connector_config(
         name=name,
-        mysql_host=mysql_host,
+        mysql_host=mysql_conf.get("host"),
         schema_registry_url=Variable.get("SCHEMA_REGISTRY"),
         database=mysql_conf.get("database"),
         user=mysql_conf.get("user"),
@@ -79,7 +78,7 @@ def _jdbc_sink_connector_config(
         "config": {
             "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
             "tasks.max": "1",
-            "topics": table if table else name,
+            "topics": name,
             "connection.url": f"jdbc:mysql://{mysql_host}/{database}",
             "connection.user": user,
             "connection.password": password,
