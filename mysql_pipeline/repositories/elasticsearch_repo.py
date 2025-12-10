@@ -10,7 +10,7 @@ class ElasticsearchRepo:
 
     def count(self, index:str, query:dict) -> int: 
         conn = self.hook.get_conn
-        res = conn.count(index=index, query=query)
+        res = conn.count(index=index, body=query)
         return res.get("count")
     
     def search(self, index:str, query:dict, size:int=200) -> List[dict]:
