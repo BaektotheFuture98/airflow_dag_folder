@@ -107,11 +107,11 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
 
     es_source_config = info.get("es_source_config")
     schema_version = info.get("schema_version")
-    schema_name = info.get("project_name") + "-value"
+    schema_name = info.get("project_name")
     latest_version = schema_service.get_schema_from_registry(schema_name)
     # Kafka producer with Avro serializer
     from confluent_kafka import SerializingProducer
-    # from confluent_kafka.schema_registry import record_subject_name_strategy
+    from confluent_kafka.schema_registry import record_subject_name_strategy
     from confluent_kafka.schema_registry.avro import AvroSerializer
 
 
@@ -121,7 +121,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
         conf={
             "auto.register.schemas": False,
             "use.schema.id": schema_version,
-            # "subject.name.strategy": record_subject_name_strategy
+            "subject.name.strategy": record_subject_name_strategy
         }
     )
 
@@ -156,6 +156,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
         for topic in topic_list:
             sent_in_topic = 0
             log.info(f"SearchPublish: Processing topic={topic}")
+
             while True:
                 hits = es_service.search(index=index, fields=fields, query=query, search_after=search_after)
                 log.info(f"SearchPublish: Retrieved hits={hits} search_after={search_after}")
@@ -173,6 +174,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
                 # Update counters and pagination token
                 sent_in_topic += len(hits)
                 log.info(f"SearchPublish: Batch size={len(hits)} total_in_topic={sent_in_topic}")
+
                 try:
                     search_after = hits[-1].get("sort")[0]
                 except Exception:
