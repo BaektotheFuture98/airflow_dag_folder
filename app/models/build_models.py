@@ -88,7 +88,7 @@ def _jdbc_sink_connector_config(
             "key.converter": "org.apache.kafka.connect.storage.StringConverter",
             "value.converter": "io.confluent.connect.avro.AvroConverter",
             "value.converter.schema.registry.url": schema_registry_url,
-            "value.converter.subject.name.strategy": "io.confluent.kafka.serializers.subject.RecordNameStrategy",
+            "value.converter.value.subject.name.strategy": "io.confluent.kafka.serializers.subject.RecordNameStrategy",
             "value.converter.schemas.enable": "true",
             "errors.tolerance": "none",
         },

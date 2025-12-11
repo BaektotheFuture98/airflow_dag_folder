@@ -7,3 +7,6 @@ class KafkaConnectRepo:
         import requests
         res = requests.post(self.url, json=config)  
         return res.json()
+    
+    def delete_connector(self, service_name: str) : 
+        pass

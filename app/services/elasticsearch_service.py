@@ -1,6 +1,6 @@
-from mysql_pipeline.repositories.elasticsearch_repo import ElasticsearchRepo
+from app.repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
-from mysql_pipeline.config.logger import get_logger
+from app.config.logger import get_logger
 
 log = get_logger(__name__)
 
