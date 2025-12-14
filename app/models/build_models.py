@@ -1,13 +1,14 @@
 """
     API 서버를 통해 유효성 검사를 끝냈다고 가정
 """
-
 from typing import List, Dict
 from airflow.sdk import Variable
+from pydantic import BaseModel, field_validator
 import json
 
+
 """
-    MySQLTrigger Task 
+    Trigger Task 
 """
 def build_es_source_model(project_name: str, index: str, query: Dict, fields: List[str]) -> Dict:
     hosts_str = Variable.get("ELASTICSEARCH_HOSTS")
@@ -30,6 +31,16 @@ def build_mysql_config(host:str, database: str, user: str, password: str, table:
         "password": password,
         "table": table
     }
+    
+def build_es_target_model(project_name: str, es_hosts:str, index: str, query: Dict, user:str, passwd:str) -> Dict : 
+    return {
+        "project_name" : project_name,
+        "es_hosts" : es_hosts,
+        "index" : index, 
+        "query" : query, 
+        "user" : user, 
+        "passwd" : passwd
+    }
 
 
 """
@@ -37,6 +48,7 @@ def build_mysql_config(host:str, database: str, user: str, password: str, table:
 """
 def build_avro_schema(project_name: str, fields: List[str]) -> str:
     avro_fields = []
+    
     for field_name in fields:
         field_type = "int" if ("in" in field_name) else "string"
         avro_fields.append({"name": field_name, "type": field_type})
@@ -92,4 +104,21 @@ def _jdbc_sink_connector_config(
             "value.converter.schemas.enable": "true",
             "errors.tolerance": "none",
         },
+    }
+    
+"""
+    Create_elasticsearch_sink_connector Task
+"""    
+def build_es_sink_connector_config(name: str, es_conf : Dict) -> Dict : 
+    return {
+        "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+        "tasks.max": "1",
+        "topics": es_conf.get("service_name"),
+        "name": es_conf.get("service_name")+"-sink_connector",
+        "connection.url": es_conf("es_hosts"),
+        "connection.username" : es_conf.get("es_user"),
+        "connection.password" : es_conf.get("es_passwd"),
+        "key.ignore" : "false",
+        "auto.register.schemas" : "false",
+        "type.name": "_doc"
     }

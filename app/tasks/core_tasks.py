@@ -32,6 +32,7 @@ def mySQLTrigger(**kwargs) -> Dict[str, Any]:
         fields =info.get("fields")
     )
 
+    ## mysql인지 elasticsearch인지 service 필드의 value에 따라 분기처리가 되어야 함
     mysql_config = build_mysql_config(
         host = info.get("host"),
         database = info.get("database"),

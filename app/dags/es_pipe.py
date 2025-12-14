@@ -10,7 +10,7 @@ from app.tasks.core_tasks import (
 )
 
 @dag(
-    dag_id = "mysql_pipeline_dag",
+    dag_id = "elasticsearch_pipeline_dag",
     schedule = None, 
     start_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
     catchup=False,
@@ -18,7 +18,7 @@ from app.tasks.core_tasks import (
     MySQL to Kafka to MySQL Pipeline DAG
     """
 )
-def mysql_pipeline_dag():
+def elasticsearch_pipeline_dag():
     mysql_trigger = mySQLTrigger()
     schema_info = register_avro_schema(mysql_trigger)
     jdbc_info = create_jdbc_sink_connector(schema_info)
@@ -26,4 +26,4 @@ def mysql_pipeline_dag():
     
     mysql_trigger >> schema_info >> jdbc_info >> es_result
 
-mysql_pipeline_dag()
+elasticsearch_pipeline_dag()
