@@ -2,10 +2,11 @@ from datetime import datetime, timezone
 from airflow.sdk import dag
 
 # TaskFlow API tasks from core_tasks
-from app.tasks.core_tasks import (
-	mySQLTrigger,
+from app.tasks.elasticsearch_tasks import (
+	esTrigger,
 	register_avro_schema,
-	create_jdbc_sink_connector,
+    create_es_index,
+	create_es_sink_connector,
 	search_and_publish_elasticsearch,
 )
 
@@ -19,11 +20,12 @@ from app.tasks.core_tasks import (
     """
 )
 def elasticsearch_pipeline_dag():
-    mysql_trigger = mySQLTrigger()
-    schema_info = register_avro_schema(mysql_trigger)
-    jdbc_info = create_jdbc_sink_connector(schema_info)
-    es_result = search_and_publish_elasticsearch(jdbc_info)
+    esTrigger_task = esTrigger()
+    schema_info = register_avro_schema(esTrigger_task)
+    es_index_info = create_es_index(schema_info)
+    es_sink_info = create_es_sink_connector(es_index_info)
+    es_result = search_and_publish_elasticsearch(es_sink_info)
     
-    mysql_trigger >> schema_info >> jdbc_info >> es_result
+    esTrigger_task >> schema_info >> es_index_info >> es_sink_info >> es_result
 
 elasticsearch_pipeline_dag()

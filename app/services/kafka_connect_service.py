@@ -11,8 +11,8 @@ class KafkaConnectService() :
         self.connect_client.create_connector(build_jdbc_sink_config(service_name, mysql_config))
         self.topic_list.append(service_name)
         
-    def create_es_sink_connector(self, service_name: str, es_config:dict) :
-        self.connect_client.create_connector(build_es_sink_connector_config(service_name, es_config))
+    def create_es_sink_connector(self, es_config:dict) :
+        self.connect_client.create_connector(build_es_sink_connector_config(es_config))
 
     def get_sink_topic_list(self) -> List[str] :
         return self.topic_list

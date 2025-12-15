@@ -32,16 +32,6 @@ def build_mysql_config(host:str, database: str, user: str, password: str, table:
         "table": table
     }
     
-def build_es_target_model(project_name: str, es_hosts:str, index: str, query: Dict, user:str, passwd:str) -> Dict : 
-    return {
-        "project_name" : project_name,
-        "es_hosts" : es_hosts,
-        "index" : index, 
-        "query" : query, 
-        "user" : user, 
-        "passwd" : passwd
-    }
-
 
 """
     Register_Avro_Schema Task 
@@ -66,7 +56,7 @@ def build_avro_schema(project_name: str, fields: List[str]) -> str:
     Create_jdbc_sink_connector Task
 """
 def build_jdbc_sink_config(name: str, mysql_conf: Dict[str, str]) -> Dict:
-    return _jdbc_sink_connector_config(
+    return _jdbc_sink_config(
         name=name,
         mysql_host=mysql_conf.get("host"),
         schema_registry_url=Variable.get("SCHEMA_REGISTRY"),
@@ -76,7 +66,7 @@ def build_jdbc_sink_config(name: str, mysql_conf: Dict[str, str]) -> Dict:
         table=mysql_conf.get("table"),
     )
 
-def _jdbc_sink_connector_config(
+def _jdbc_sink_config(
     name: str,
     mysql_host: str,
     schema_registry_url: str,
@@ -108,17 +98,51 @@ def _jdbc_sink_connector_config(
     
 """
     Create_elasticsearch_sink_connector Task
-"""    
-def build_es_sink_connector_config(name: str, es_conf : Dict) -> Dict : 
+"""
+def build_es_target_model(project_name: str, es_hosts:str, index: str, user:str, passwd:str) -> Dict : 
     return {
-        "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
-        "tasks.max": "1",
-        "topics": es_conf.get("service_name"),
-        "name": es_conf.get("service_name")+"-sink_connector",
-        "connection.url": es_conf("es_hosts"),
-        "connection.username" : es_conf.get("es_user"),
-        "connection.password" : es_conf.get("es_passwd"),
-        "key.ignore" : "false",
-        "auto.register.schemas" : "false",
-        "type.name": "_doc"
+        "project_name" : project_name,
+        "es_hosts" : es_hosts,
+        "index" : index, 
+        "user" : user, 
+        "passwd" : passwd
     }
+
+
+
+def build_es_sink_connector_config(es_config : dict) -> Dict: 
+    return _es_sink_connector_config(
+        project_name = es_config.get("project_name"),
+        index = es_config.get("index"),
+        hosts = es_config.get("hosts"),
+        user = es_config.get("user"),
+        password = es_config.get("password"),
+        schema_registry_url = Variable.get("SCHEMA_REGISTRY")
+    )
+
+def _es_sink_connector_config(
+        project_name: str,
+        index : str, 
+        hosts: List[str],
+        user: str,
+        password: str,
+        schema_registry_url: str
+    ) -> Dict:
+        return {
+            "name": project_name + "-EsSinkConnector",
+            "config": {
+                "connector.class": "io.confluent.connect.elasticsearch.ElasticsearchSinkConnector",
+                "type.name": "_doc",
+                "connection.url": f"{hosts}",
+                "connection.username": user,
+                "connection.password": password,
+                "topics": project_name,
+                "write.method": "UPSERT",
+                "tasks.max": "1",
+                "value.converter": "io.confluent.connect.avro.AvroConverter",
+                "value.converter.schema.registry.url": schema_registry_url,
+                "value.converter.value.subject.name.strategy": "io.confluent.kafka.serializers.subject.RecordNameStrategy",
+                "key.ignore": "false",
+                "key.converter": "org.apache.kafka.connect.storage.StringConverter"
+            }
+        }
