@@ -129,15 +129,15 @@ class ElasticsearchService() :
                 for template in value:
                     for temp_key, temp_value in template.items():
                         if isinstance(temp_value, dict) and 'mapping' in temp_value:
-                            remove_analyzer_from_mapping(temp_value['mapping'])
+                            self._remove_analyzer_from_mapping(temp_value['mapping'])
             
             elif isinstance(value, dict):
                 # properties, fields, mapping 등 내부 딕셔너리 처리
-                remove_analyzer_from_mapping(value)
+                self._remove_analyzer_from_mapping(value)
             
             elif isinstance(value, list):
                 # 리스트 내 딕셔너리 처리 (예: dynamic_templates)
                 for item in value:
-                    remove_analyzer_from_mapping(item)
+                    self._remove_analyzer_from_mapping(item)
                 
         return mapping_dict
