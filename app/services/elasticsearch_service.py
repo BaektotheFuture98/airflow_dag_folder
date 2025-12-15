@@ -64,8 +64,8 @@ class ElasticsearchService() :
 
     def create_index_before_migration(self, source_index:str, target_index:str) -> bool : 
         index_metadata_response = self.client.get_index_mapping(source_index)
+        
         metadata = index_metadata_response[source_index]
-
         settings_data = metadata.get('settings', {}).get('index', {})
         settings_to_copy = {
             k: v for k, v in settings_data.items() 
@@ -101,13 +101,13 @@ class ElasticsearchService() :
 
         try:
             if self.client.exists(index=target_index):
-                print(f"⚠️ 경고: 대상 인덱스 '{target_index}'가 이미 존재합니다. 생성을 건너뜁니다.")
+                log.info(f"⚠️ 경고: 대상 인덱스 '{target_index}'가 이미 존재합니다. 생성을 건너뜁니다.")
                 return True
 
             creation_response = self.client.create_index(index=target_index, body=new_index_body)
             
             if creation_response.get('acknowledged'):
-                print(f"🎉 성공: 새 인덱스 '{target_index}'가 성공적으로 생성되었고 설정/매핑이 적용되었습니다.")
+                log.info(f"🎉 성공: 새 인덱스 '{target_index}'가 성공적으로 생성되었고 설정/매핑이 적용되었습니다.")
                 return True
             else:
                 return False
@@ -117,6 +117,9 @@ class ElasticsearchService() :
             return False        
 
     def _remove_analyzer_from_mapping(self, mapping_dict : dict) -> dict : 
+        if not isinstance(mapping_dict, dict):
+            return mapping_dict
+        
         if 'analyzer' in mapping_dict and mapping_dict['analyzer'] in ['komoran', 'cjk', 'url', 'whitespace'] : 
             if mapping_dict.get('type') == 'text' : 
                 mapping_dict.pop('analyzer') == 'standard'
