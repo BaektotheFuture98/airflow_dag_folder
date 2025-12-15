@@ -88,11 +88,8 @@ class ElasticsearchService() :
 
         modified_mappings = json.loads(json.dumps(mappings_data))
 
-        if 'properties' in modified_mappings : 
-            self._remove_analyzer_from_mapping(modified_mappings['properties'])
-        
-        if 'dynamic_templates' in modified_mappings : 
-            self._remove_analyzer_from_mapping({"dynamic_templates": modified_mappings['dynamic_templates']})
+        # 전체 매핑 트리를 대상으로 안전하게 제거/치환 수행
+        self._remove_analyzer_from_mapping(modified_mappings)
         
         new_index_body = {
             "settings": settings_to_copy,
@@ -116,31 +113,60 @@ class ElasticsearchService() :
             print(f"❌ 오류: 인덱스 생성 중 알 수 없는 예외 발생: {e}")
             return False        
 
-    def _remove_analyzer_from_mapping(self, mapping_dict : dict) -> dict : 
-        if not isinstance(mapping_dict, dict):
-            return mapping_dict
-        
-        if 'analyzer' in mapping_dict and mapping_dict['analyzer'] in ['komoran', 'cjk', 'url', 'whitespace'] : 
-            if mapping_dict.get('type') == 'text' : 
-                mapping_dict.pop('analyzer') == 'standard'
-            else : 
-                del mapping_dict['analyzer']
+    def _remove_analyzer_from_mapping(self, node):
+        """
+        매핑 트리에서 특정 analyzer(komoran, cjk, url, whitespace)를 제거하거나
+        text 타입일 경우 'standard'로 교체.
+        dict / list / 기타 타입을 모두 안전하게 처리.
+        """
+        targets = {'komoran', 'cjk', 'url', 'whitespace'}
 
-        for key, value in mapping_dict.items():
-            if key == 'dynamic_templates' and isinstance(value, list):
-                # Dynamic Templates 처리
-                for template in value:
-                    for temp_key, temp_value in template.items():
-                        if isinstance(temp_value, dict) and 'mapping' in temp_value:
-                            self._remove_analyzer_from_mapping(temp_value['mapping'])
-            
-            elif isinstance(value, dict):
-                # properties, fields, mapping 등 내부 딕셔너리 처리
-                self._remove_analyzer_from_mapping(value)
-            
-            elif isinstance(value, list):
-                # 리스트 내 딕셔너리 처리 (예: dynamic_templates)
-                for item in value:
+        # dict 처리
+        if isinstance(node, dict):
+            # 현재 노드에 analyzer 키가 있으면 처리
+            if 'analyzer' in node and node.get('analyzer') in targets:
+                if node.get('type') == 'text':
+                    # text 타입이면 표준 분석기로 교체
+                    node['analyzer'] = 'standard'
+                else:
+                    # 그 외 타입이면 analyzer 제거
+                    node.pop('analyzer', None)
+
+            # properties 하위 필드 순회
+            props = node.get('properties')
+            if isinstance(props, dict):
+                for sub in props.values():
+                    self._remove_analyzer_from_mapping(sub)
+
+            # multi-fields (fields) 순회
+            fields = node.get('fields')
+            if isinstance(fields, dict):
+                for sub in fields.values():
+                    self._remove_analyzer_from_mapping(sub)
+
+            # dynamic_templates 순회 (list[ {name: {mapping: {...}}}, ... ])
+            dyn = node.get('dynamic_templates')
+            if isinstance(dyn, list):
+                for tmpl in dyn:
+                    if isinstance(tmpl, dict):
+                        for tmpl_body in tmpl.values():
+                            if isinstance(tmpl_body, dict):
+                                mapping = tmpl_body.get('mapping')
+                                if mapping:
+                                    self._remove_analyzer_from_mapping(mapping)
+
+            # 기타 하위 dict/list도 방어적 순회
+            for v in node.values():
+                if isinstance(v, (dict, list)):
+                    self._remove_analyzer_from_mapping(v)
+            return
+
+        # list 처리
+        if isinstance(node, list):
+            for item in node:
+                if isinstance(item, (dict, list)):
                     self._remove_analyzer_from_mapping(item)
-                
-        return mapping_dict
+            return
+
+        # 그 외 타입(str, int 등)은 처리 없음
+        return

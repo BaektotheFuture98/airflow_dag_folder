@@ -21,9 +21,9 @@ class ElasticsearchRepo:
         result = res.get("hits", {})
         return result
     
-    def create_index(self, index:str, new_index_body:dict) -> None: 
+    def create_index(self, index:str, body:dict) -> None: 
         conn = self.hook.get_conn
-        conn.create(index = index, body = new_index_body)
+        conn.create(index = index, body = body)
 
     def get_index_mapping(self, index:str) -> dict : 
         conn = self.hook.get_conn
