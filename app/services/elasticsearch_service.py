@@ -1,6 +1,7 @@
 from app.repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
 from app.config.logger import get_logger
+from app.config.elasticsearch_index import create_index_with_copied_mapping_FINAL
 import json
 
 log = get_logger(__name__)
@@ -63,55 +64,58 @@ class ElasticsearchService() :
     
 
     def create_index_before_migration(self, source_index:str, target_index:str) -> bool : 
-        index_metadata_response = self.client.get_index_mapping(source_index)
+        source_index = source_index.lower()
+        target_index = target_index.lower()
+        return create_index_with_copied_mapping_FINAL(self.client.get_client(), source_index, target_index)
+        # index_metadata_response = self.client.get_index_mapping(source_index)
         
-        metadata = index_metadata_response[source_index]
-        settings_data = metadata.get('settings', {}).get('index', {})
-        settings_to_copy = {
-            k: v for k, v in settings_data.items() 
-            if k not in ['creation_date', 'uuid', 'version', 'provided_name']
-        }
+        # metadata = index_metadata_response[source_index]
+        # settings_data = metadata.get('settings', {}).get('index', {})
+        # settings_to_copy = {
+        #     k: v for k, v in settings_data.items() 
+        #     if k not in ['creation_date', 'uuid', 'version', 'provided_name']
+        # }
 
-        mappings_data = metadata.get('mappings', {})
+        # mappings_data = metadata.get('mappings', {})
 
-        if 'analysis' in settings_to_copy : 
-            analysis_block = settings_to_copy['analysis']
+        # if 'analysis' in settings_to_copy : 
+        #     analysis_block = settings_to_copy['analysis']
             
-            normalizer_block = analysis_block.pop('normalizer', None) 
+        #     normalizer_block = analysis_block.pop('normalizer', None) 
             
-            if normalizer_block : 
-                settings_to_copy['analysis'] = {'normalizer':normalizer_block}
-                log.info("설정: 'analysis' 블록 재구성 완료. normalizer 정의 유지.")
-            else : 
-                del settings_to_copy['analysis']
-                log.info("설정: 'analysis' 블록 제거 완료 (normalizer 정의 없음).")
+        #     if normalizer_block : 
+        #         settings_to_copy['analysis'] = {'normalizer':normalizer_block}
+        #         log.info("설정: 'analysis' 블록 재구성 완료. normalizer 정의 유지.")
+        #     else : 
+        #         del settings_to_copy['analysis']
+        #         log.info("설정: 'analysis' 블록 제거 완료 (normalizer 정의 없음).")
 
-        modified_mappings = json.loads(json.dumps(mappings_data))
+        # modified_mappings = json.loads(json.dumps(mappings_data))
 
-        # 전체 매핑 트리를 대상으로 안전하게 제거/치환 수행
-        self._remove_analyzer_from_mapping(modified_mappings)
+        # # 전체 매핑 트리를 대상으로 안전하게 제거/치환 수행
+        # self._remove_analyzer_from_mapping(modified_mappings)
         
-        new_index_body = {
-            "settings": settings_to_copy,
-            "mappings": modified_mappings 
-        }
+        # new_index_body = {
+        #     "settings": settings_to_copy,
+        #     "mappings": modified_mappings 
+        # }
 
-        try:
-            if self.client.exists(index=target_index):
-                log.info(f"⚠️ 경고: 대상 인덱스 '{target_index}'가 이미 존재합니다. 생성을 건너뜁니다.")
-                return True
+        # try:
+        #     if self.client.exists(index=target_index):
+        #         log.info(f"⚠️ 경고: 대상 인덱스 '{target_index}'가 이미 존재합니다. 생성을 건너뜁니다.")
+        #         return True
 
-            creation_response = self.client.create_index(index=target_index, body=new_index_body)
+        #     creation_response = self.client.create_index(index=target_index, body=new_index_body)
             
-            if creation_response.get('acknowledged'):
-                log.info(f"🎉 성공: 새 인덱스 '{target_index}'가 성공적으로 생성되었고 설정/매핑이 적용되었습니다.")
-                return True
-            else:
-                return False
+        #     if creation_response.get('acknowledged'):
+        #         log.info(f"🎉 성공: 새 인덱스 '{target_index}'가 성공적으로 생성되었고 설정/매핑이 적용되었습니다.")
+        #         return True
+        #     else:
+        #         return False
 
-        except Exception as e:
-            print(f"❌ 오류: 인덱스 생성 중 알 수 없는 예외 발생: {e}")
-            return False        
+        # except Exception as e:
+        #     print(f"❌ 오류: 인덱스 생성 중 알 수 없는 예외 발생: {e}")
+        #     return False        
 
     def _remove_analyzer_from_mapping(self, node):
         """

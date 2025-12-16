@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from airflow.sdk import dag
 
 # TaskFlow API tasks from core_tasks
-from app.tasks.core_tasks import (
+from app.tasks.mysql_tasks import (
 	mySQLTrigger,
 	register_avro_schema,
 	create_jdbc_sink_connector,

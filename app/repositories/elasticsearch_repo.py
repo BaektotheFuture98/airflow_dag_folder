@@ -11,6 +11,9 @@ class ElasticsearchRepo:
         log.info(f"ElasticsearchRepo: Connecting to hosts={host_list}")
         self.hook = ElasticsearchPythonHook(hosts = host_list, es_conn_args={"basic_auth": basic_auth})
 
+    def get_client(self) : 
+        return self.hook.get_conn
+
     def count(self, index:str, query:dict) -> int: 
         conn = self.hook.get_conn
         res = conn.count(index=index, body=query)
@@ -23,7 +26,7 @@ class ElasticsearchRepo:
     
     def create_index(self, index:str, body:dict) -> None: 
         conn = self.hook.get_conn
-        conn.create(index = index, body = body)
+        conn.indices.create(index = index, body = body)
 
     def get_index_mapping(self, index:str) -> dict : 
         conn = self.hook.get_conn

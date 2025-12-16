@@ -22,18 +22,18 @@ def esTrigger(**kwargs) -> Dict[str, Any]:
     log.info("ElasticsearchTrigger: Building ES source and MySQL configs")
     
     es_source_config = build_es_source_model(
-        project_name = info.get("project_name"),
-        index = info.get("elasticsearch_index") if info.get("elasticsearch_index") else "",
+        project_name= info.get("project_name"),
+        es_source_index = info.get("es_source_index"),
         query = info.get("query"),
         fields =info.get("fields")
     )
 
     es_target_config = build_es_target_model(
-        project_name = info.get("project_name"),
-        es_hosts = info.get("elasticsearch_hosts"),
-        index = info.get("elasticsearch_index"),
+        project_name= info.get("project_name"),
+        es_target_hosts = info.get("es_target_hosts"),
+        es_target_index = info.get("es_target_index"),
         user= info.get("user"),
-        passwd= info.get("password")
+        password= info.get("password")
     )
 
     return {
@@ -64,10 +64,7 @@ def register_avro_schema(info: Dict[str, Any]) -> Dict[str, Any]:
     
     return info
 
-"""
- target_index 명은 topic 명으로 설정되기 때문에 target_index를 project_name으로 설정
- (sinkconnector에서는 project_name을 topic 명으로 사용하기 때문)
-"""
+
 @task(doc_md = "Elasticsearch Index 생성")
 def create_es_index(info: Dict[str, Any]) -> Dict[str, Any] : 
     from app.repositories.elasticsearch_repo import ElasticsearchRepo
@@ -75,14 +72,16 @@ def create_es_index(info: Dict[str, Any]) -> Dict[str, Any] :
 
     es_target_config = info.get("es_target_config")
     es_source_config = info.get("es_source_config")
-    log.info(f"user, passwd : {es_target_config.get('user')}, {es_target_config.get('passwd')}")
+    log.info(f"user, passwd : {es_target_config.get('user')}, {es_target_config.get('password')}")
+
     es_repo = ElasticsearchRepo(
-        es_target_config.get("es_hosts"),(es_target_config.get("user"), es_target_config.get("passwd"))
+        es_target_config.get("es_target_hosts"),(es_target_config.get("user"), es_target_config.get("password"))
     )
+
     es_service = ElasticsearchService(es_repo)
 
-    source_index = es_source_config.get("index")
-    target_index = es_target_config.get("project_name") # target index를 project_name으로 설정 (토픽명을 기준으로 인덱스가 생성되기 때문에)
+    source_index = es_source_config.get("es_source_index")
+    target_index = es_target_config.get("es_target_index") 
     es_service.create_index_before_migration(source_index=source_index, target_index=target_index)
     
     return info
@@ -100,7 +99,7 @@ def create_es_sink_connector(info: Dict[str, Any]) -> Dict[str, Any] :
     es_target_config = info.get("es_target_config")
     
     kafka_connect_service.create_es_sink_connector(
-            es_target_config = es_target_config
+            es_config = es_target_config
     )
     return info
 
@@ -119,7 +118,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     es_source_config = info.get("es_source_config")
     schema_version = info.get("schema_version")
     schema_name = info.get("project_name")
-    
+    es_target_config = info.get("es_target_config")
     latest_version = schema_service.get_schema_from_registry(schema_name)
 
     # Kafka producer with Avro serializer
@@ -158,8 +157,8 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     es_service = ElasticsearchService(es_repo)
 
     # Publish loop with pagination and chunk topic boundaries
-    index = es_source_config.get("index")
-    topic = info.get("project_name")
+    index = es_source_config.get("es_source_index")
+    topic = es_target_config.get("es_target_index")
     fields = es_source_config.get("fields")
     chunk_size = 100000
     query = es_source_config.get("query")
@@ -181,7 +180,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
                 if record.get("an_content") == '' or record.get("an_content") is None:
                     record["an_content"] = " "
 
-                producer.produce(topic=topic, value=record)
+                producer.produce(topic=topic, key=record.get("kw_docid"), value=record)
 
                 # Update counters and pagination token
             sent_in_topic += len(hits)

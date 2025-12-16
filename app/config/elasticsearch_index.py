@@ -5,11 +5,11 @@ import logging
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# ... (remove_analyzer_from_mapping 함수는 그대로 유지) ...
-
-# 이전 답변에서 제공된 remove_analyzer_from_mapping 함수를 여기에 포함했다고 가정합니다.
+# --- remove_analyzer_from_mapping 함수는 그대로 유지 ---
 def remove_analyzer_from_mapping(mapping_dict: dict) -> dict:
-    # ... (이전 답변의 remove_analyzer_from_mapping 함수 내용) ...
+    """
+    매핑 딕셔너리를 순회하며 특정 custom analyzer를 standard로 변경하거나 제거합니다.
+    """
     if not isinstance(mapping_dict, dict):
         return mapping_dict
 
@@ -41,6 +41,8 @@ def remove_analyzer_from_mapping(mapping_dict: dict) -> dict:
                 remove_analyzer_from_mapping(item)
                 
     return mapping_dict
+# --------------------------------------------------------
+
 
 def create_index_with_copied_mapping_FINAL(client: Elasticsearch, source_index: str, target_index: str) -> bool:
     print(f"\n✅ 작업 시작: '{source_index}' 설정 및 매핑 복사 -> '{target_index}' 생성")
@@ -78,24 +80,21 @@ def create_index_with_copied_mapping_FINAL(client: Elasticsearch, source_index: 
     # 3-1. settings: analysis 블록에서 normalizer만 보존하고 나머지는 제거
     if 'analysis' in settings_to_copy:
         analysis_block = settings_to_copy['analysis']
-        
-        # normalizer 블록만 따로 추출합니다.
         normalizer_block = analysis_block.pop('normalizer', None) 
         
-        # analysis_block에서 analyzer, tokenizer, filter, char_filter 등 
-        # 불필요한 사용자 정의 분석기 관련 블록을 모두 제거합니다. (pop으로 이미 대부분 제거됨)
-        # 이제 analysis_block은 비어있거나 normalizer만 제거된 상태입니다.
-        
-        # analysis_block을 완전히 재구성하여 normalizer만 포함하도록 합니다.
         if normalizer_block:
             settings_to_copy['analysis'] = {'normalizer': normalizer_block}
             logging.info("⭐ 설정: 'analysis' 블록 재구성 완료. normalizer 정의 유지.")
         else:
-            # normalizer가 없으면 analysis 블록 전체를 제거합니다.
             del settings_to_copy['analysis']
             logging.info("⭐ 설정: 'analysis' 블록 제거 완료 (normalizer 정의 없음).")
 
-    # 3-2. mappings: properties 및 dynamic_templates 내 analyzer 수정/제거
+    # 3-2. 샤드 및 레플리카 수 변경 (요청 사항 적용: Primary Shard 1, Replica Shard 1)
+    settings_to_copy['number_of_shards'] = 1
+    settings_to_copy['number_of_replicas'] = 1
+    logging.info("⭐ 설정: 샤드/레플리카 수 '1:1'로 변경 완료.")
+
+    # 3-3. mappings: properties 및 dynamic_templates 내 analyzer 수정/제거
     modified_mappings = json.loads(json.dumps(mappings_data))
     
     logging.info("⭐ 매핑: custom analyzer 필드 수정 시작.")
@@ -122,6 +121,7 @@ def create_index_with_copied_mapping_FINAL(client: Elasticsearch, source_index: 
         
         if creation_response.get('acknowledged'):
             print(f"🎉 성공: 새 인덱스 '{target_index}'가 성공적으로 생성되었고 설정/매핑이 적용되었습니다.")
+            # 
             return True
         else:
             return False
@@ -133,14 +133,14 @@ def create_index_with_copied_mapping_FINAL(client: Elasticsearch, source_index: 
         print(f"❌ 오류: 인덱스 생성 중 알 수 없는 예외 발생: {e}")
         return False
 
-# --- 사용 예시 ---
+# #--- 사용 예시 ---
 
-# # 실제 클라이언트 연결 (예시)
+# #실제 클라이언트 연결 (예시)
 # client = Elasticsearch(['http://192.168.125.63:9200'], 
 #                        basic_auth=('elastic', 'elastic')) 
 # SOURCE_INDEX = "lucy_main_v1_20241115"
-# TARGET_INDEX = "migration_es_index_final_test"
+# TARGET_INDEX = "migration_es_index_final_shard_test"
 
-# # 함수 호출 (주석 해제 후 실행)
+# #함수 호출 (주석 해제 후 실행)
 # create_index_with_copied_mapping_FINAL(client, SOURCE_INDEX, TARGET_INDEX)
 
