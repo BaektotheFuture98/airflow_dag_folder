@@ -14,6 +14,9 @@ class ElasticsearchRepo:
     def get_client(self) : 
         return self.hook.get_conn
 
+    def close_client(self) -> None :
+        self.hook.get_conn.close()
+
     def count(self, index:str, query:dict) -> int: 
         conn = self.hook.get_conn
         res = conn.count(index=index, body=query)

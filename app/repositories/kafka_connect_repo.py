@@ -1,7 +1,6 @@
 class KafkaConnectRepo:
     def __init__(self, kafka_connect_url: str):
         self.url = kafka_connect_url + "/connectors"
-        
     
     def create_connector(self, config: dict) :
         import requests

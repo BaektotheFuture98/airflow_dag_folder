@@ -201,6 +201,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
 
     finally:
         try:
+            es_service.close_client()
             producer.flush()
         except Exception:
             pass
