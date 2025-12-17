@@ -26,9 +26,9 @@ def build_es_source_model(project_name: str, query: Dict, fields: List[str], es_
     
 def build_mysql_config(mysql_host:str, mysql_database: str, user: str, password: str, mysql_table: str | None = None) -> Dict[str, str]:
     return {
-        "host": mysql_host,
-        "database": mysql_database,
-        "table": mysql_table,
+        "mysql_host": mysql_host,
+        "mysql_database": mysql_database,
+        "mysql_table": mysql_table,
         "user": user,
         "password": password
     }
@@ -74,7 +74,7 @@ def _jdbc_sink_config(
     mysql_database: str,
     user: str,
     password: str,
-    table: str | None = None,
+    mysql_table: str | None = None,
 ) -> Dict:
     return {
         "name": name + "-jdbc-sinkConnector",
@@ -85,7 +85,7 @@ def _jdbc_sink_config(
             "connection.url": f"jdbc:mysql://{mysql_host}/{mysql_database}",
             "connection.user": user,
             "connection.password": password,
-            "table.name.format": table if table else name,
+            "table.name.format": mysql_table if mysql_table else name,
             "auto.create": "true",
             "auto.evolve": "true",
             "key.converter": "org.apache.kafka.connect.storage.StringConverter",
