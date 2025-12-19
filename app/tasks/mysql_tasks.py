@@ -159,7 +159,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     
 
     # Publish loop with pagination and chunk topic boundaries
-    index = es_source_config.get("index")
+    index = es_source_config.get("es_source_index")
     topic_list = info.get("topic_list")
     topic_list = sorted(topic_list)
     fields = es_source_config.get("fields")
@@ -189,8 +189,7 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
                 try:
                     search_after = hits[-1].get("sort")[0]
                 except Exception:
-                    search_after = None
-
+                    search_after = None               
                 if sent_in_topic >= chunk_size:
                     log.info("SearchPublish: Chunk size reached, flushing and moving to next topic")
                     producer.flush()

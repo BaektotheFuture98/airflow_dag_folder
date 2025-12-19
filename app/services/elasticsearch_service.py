@@ -2,7 +2,6 @@ from app.repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
 from app.config.logger import get_logger
 from app.config.elasticsearch_index import create_index_with_copied_mapping_FINAL
-import json
 
 log = get_logger(__name__)
 
@@ -45,6 +44,7 @@ class ElasticsearchService() :
             ],
             "search_after": [search_after]
         }   
+        log.info(f"ElasticsearchService: Built paginated query: {build_query}")
         return build_query
     
     def _query_with_pagination(self, query: str, page_size: int = None, search_after:str = None) -> dict: 

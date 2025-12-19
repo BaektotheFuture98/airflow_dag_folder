@@ -8,4 +8,4 @@ class KafkaConnectRepo:
         return res.json()
     
     def delete_connector(self, service_name: str) : 
-        pass
+        pass    
