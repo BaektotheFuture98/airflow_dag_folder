@@ -6,8 +6,8 @@ from app.tasks.mysql_tasks import (
 	mySQLTrigger,
 	register_avro_schema,
 	create_jdbc_sink_connector,
-	search_and_publish_elasticsearch,
-)
+	search_and_publish_elasticsearch
+    )
 
 @dag(
     dag_id = "mysql_pipeline_dag",

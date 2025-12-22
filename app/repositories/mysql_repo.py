@@ -15,3 +15,22 @@ class MySQLRepo:
         results = cursor.fetchall()
         cursor.close()
         return results
+    
+    def insert_query(self, query: str, data: dict) -> int:
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(query, data)
+            self.connection.commit()
+            return cursor.lastrowid or 0
+        finally:
+            cursor.close()
+
+    def update_query(self, query: str, data: dict) -> int:
+        """Execute an UPDATE statement and return affected row count."""
+        cursor = self.connection.cursor()
+        try:
+            cursor.execute(query, data)
+            self.connection.commit()
+            return cursor.rowcount or 0
+        finally:
+            cursor.close()
