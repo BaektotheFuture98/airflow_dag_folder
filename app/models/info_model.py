@@ -4,6 +4,7 @@ import socket
 
 class InfoModel(BaseModel) : 
     project_name : str
+    st_seq : int
     es_source_config : dict
     mysql_sink_config : dict | None
     es_sink_config : dict | None

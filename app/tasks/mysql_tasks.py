@@ -48,12 +48,11 @@ def mySQLTrigger(**kwargs) -> Dict[str, Any]:
     log.info(f"MySQLTrigger: Calculated chunks={chunks}")
     info = {
         "project_name" : info.get("project_name"),
+        "st_seq" : info.get("st_seq"),
         "es_source_config" : es_source_config,
         "mysql_config" : mysql_config,
         "chunks" : chunks
     }
-
-    _insert_spark_task(info, status="S")
     return info
 
 @task(doc_md="Avro 스키마 등록")
@@ -203,14 +202,12 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     finally:
         try:
             producer.flush()
-            _update_spark_task(info, status="C", set_end_date=True)
+            _update_spark_task(info, status="C", set_end_date=True, st_seq=info.get("st_seq"))
         except Exception:
             pass
 
     # Return info dict for downstream tasks; typing of original stub was invalid
     return info
-
-def _insert_spark_task(info: Dict[str, Any], status: str = "W") -> Dict[str, Any]:
     """Insert a row into spark_task using mysql_service/mysql_repo.
 
     - status: 진행 상태( W:대기 / S:진행 / C:완료 / E:에러 )
@@ -302,13 +299,8 @@ def _insert_spark_task(info: Dict[str, Any], status: str = "W") -> Dict[str, Any
     return info
 
 
-def _update_spark_task(info: Dict[str, Any], status: str, set_end_date: bool = False) -> Dict[str, Any]:
-    """Update `spark_task` row status and optionally set end date.
+def _update_spark_task(info: Dict[str, Any], status: str, set_end_date: bool = False, st_seq: int | None = None) -> Dict[str, Any]:
 
-    - status: 진행 상태( W:대기 / S:진행 / C:완료 / E:에러 )
-    - set_end_date: True일 때 `st_end_date`를 현재 시간으로 설정
-    우선 `info['spark_task_id']`로 업데이트하고, 없으면 `project_name`의 진행중인 최신 행을 업데이트합니다.
-    """
     from datetime import datetime
     from app.repositories.mysql_repo import MySQLRepo
     from app.services.mysql_service import MySQLService
@@ -326,17 +318,17 @@ def _update_spark_task(info: Dict[str, Any], status: str, set_end_date: bool = F
     )
     mysql_service = MySQLService(mysql_repo)
 
-    st_id = info.get("spark_task_id")
+    st_id = st_seq if st_seq is not None else info.get("st_seq")
     end_dt = datetime.now() if set_end_date else None
 
     if st_id:
         if set_end_date:
             update_sql = (
                 "UPDATE `spark_task` SET "
-                "`st_status`=%(st_status)s, `st_end_date`=%(st_end_date)s "
+                "`st_status`=%(st_status)s, `st_end_date`=%(st_end_date)s, `st_progress`=%(st_progress)s "
                 "WHERE `st_seq`=%(st_seq)s"
             )
-            params = {"st_status": status, "st_end_date": end_dt, "st_seq": st_id}
+            params = {"st_status": status, "st_end_date": end_dt, "st_progress": 100, "st_seq": st_id}
             log.info("SparkTask: Updating id=%s to status=%s, end_date=%s", st_id, status, end_dt)
         else:
             update_sql = (
@@ -353,11 +345,11 @@ def _update_spark_task(info: Dict[str, Any], status: str, set_end_date: bool = F
         if set_end_date:
             update_sql = (
                 "UPDATE `spark_task` SET "
-                "`st_status`=%(st_status)s, `st_end_date`=%(st_end_date)s "
+                "`st_status`=%(st_status)s, `st_end_date`=%(st_end_date)s, `st_progress`=%(st_progress)s "
                 "WHERE `st_name`=%(st_name)s AND `st_end_date` IS NULL "
                 "ORDER BY `st_seq` DESC LIMIT 1"
             )
-            params = {"st_status": status, "st_end_date": end_dt, "st_name": info.get("project_name")}
+            params = {"st_status": status, "st_end_date": end_dt, "st_name": info.get("project_name"), "st_progress": 100}
             log.info("SparkTask: Updating latest active row for project=%s to status=%s, end_date=%s", info.get("project_name"), status, end_dt)
         else:
             update_sql = (
