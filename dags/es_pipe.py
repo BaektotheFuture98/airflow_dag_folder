@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from airflow.sdk import dag
 
 # TaskFlow API tasks from core_tasks
-from app.tasks.elasticsearch_tasks import (
+from plugins.tasks.elasticsearch_tasks import (
 	esTrigger,
 	register_avro_schema,
     create_es_index,

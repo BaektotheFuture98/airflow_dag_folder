@@ -4,7 +4,7 @@
 from typing import List, Dict
 from airflow.sdk import Variable
 import json
-from app.config.logger import get_logger
+from plugins.config.logger import get_logger
 
 log = get_logger(__name__)
 

@@ -1,15 +1,15 @@
 from airflow.sdk import task, Variable
 from airflow.exceptions import AirflowFailException
 from typing import Dict, Any
-from app.config.logger import get_logger
+from plugins.config.logger import get_logger
 
 log = get_logger(__name__)
 
 @task(doc_md="API 수신 완료, 설정 파일 구성")
 def mySQLTrigger(**kwargs) -> Dict[str, Any]:
-    from app.repositories.elasticsearch_repo import ElasticsearchRepo
-    from app.services.elasticsearch_service import ElasticsearchService
-    from app.models.build_models import build_es_source_model, build_mysql_config
+    from plugins.repositories.elasticsearch_repo import ElasticsearchRepo
+    from plugins.services.elasticsearch_service import ElasticsearchService
+    from plugins.models.build_models import build_es_source_model, build_mysql_config
 
     dag_run = kwargs.get("dag_run")
     info = dag_run.conf if dag_run else {}
@@ -60,9 +60,9 @@ def register_avro_schema(info: Dict[str, Any]) -> Dict[str, Any]:
     project_name = info.get("project_name")
     es_source_config = info.get("es_source_config")
     
-    from app.repositories.schema_registry_repo import SchemaRegistryRepo
-    from app.services.schema_registry_service import SchemaRegistryService
-    from app.models.build_models import build_avro_schema
+    from plugins.repositories.schema_registry_repo import SchemaRegistryRepo
+    from plugins.services.schema_registry_service import SchemaRegistryService
+    from plugins.models.build_models import build_avro_schema
     
     repo = SchemaRegistryRepo(Variable.get("SCHEMA_REGISTRY"))
     services = SchemaRegistryService(repo)
@@ -79,8 +79,8 @@ def register_avro_schema(info: Dict[str, Any]) -> Dict[str, Any]:
 
 @task(doc_md = "JdbcSinkConnector 생성")
 def create_jdbc_sink_connector(info: Dict[str, Any]) -> Dict[str, Any] : 
-    from app.repositories.kafka_connect_repo import KafkaConnectRepo
-    from app.services.kafka_connect_service import KafkaConnectService
+    from plugins.repositories.kafka_connect_repo import KafkaConnectRepo
+    from plugins.services.kafka_connect_service import KafkaConnectService
 
     kafka_connect_repo = KafkaConnectRepo(Variable.get("KAFKA_CONNECT"))
     kafka_connect_service = KafkaConnectService(kafka_connect_repo)
@@ -111,8 +111,8 @@ def _make_topic_name(project_name: str, table_name:str, chunk_num: int) -> str:
 def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] : 
     
     # Schema Registry setup
-    from app.repositories.schema_registry_repo import SchemaRegistryRepo
-    from app.services.schema_registry_service import SchemaRegistryService
+    from plugins.repositories.schema_registry_repo import SchemaRegistryRepo
+    from plugins.services.schema_registry_service import SchemaRegistryService
 
     log.info("SearchPublish: Initializing Schema Registry client")
     schema_repo = SchemaRegistryRepo(Variable.get("SCHEMA_REGISTRY"))
@@ -151,8 +151,8 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
     )
 
     # Elasticsearch repo/service
-    from app.repositories.elasticsearch_repo import ElasticsearchRepo
-    from app.services.elasticsearch_service import ElasticsearchService
+    from plugins.repositories.elasticsearch_repo import ElasticsearchRepo
+    from plugins.services.elasticsearch_service import ElasticsearchService
 
     log.info("SearchPublish: Initializing Elasticsearch repo/service")
     es_repo = ElasticsearchRepo(Variable.get("ELASTICSEARCH_HOSTS"), (Variable.get("ELASTICSEARCH_USER"), Variable.get("ELASTICSEARCH_PASSWORD")))
@@ -302,8 +302,8 @@ def search_and_publish_elasticsearch(info: Dict[str, Any]) -> Dict[str, Any] :
 def _update_spark_task(info: Dict[str, Any], status: str, set_end_date: bool = False, st_seq: int | None = None) -> Dict[str, Any]:
 
     from datetime import datetime
-    from app.repositories.mysql_repo import MySQLRepo
-    from app.services.mysql_service import MySQLService
+    from plugins.repositories.mysql_repo import MySQLRepo
+    from plugins.services.mysql_service import MySQLService
 
     valid_status = {"W", "S", "C", "E"}
     if status not in valid_status:

@@ -1,5 +1,5 @@
 from typing import Tuple, List
-from app.config.logger import get_logger
+from plugins.config.logger import get_logger
 log = get_logger(__name__)
 
 class ElasticsearchRepo: 

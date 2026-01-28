@@ -1,5 +1,5 @@
 
-from app.repositories.mysql_repo import MySQLRepo
+from plugins.repositories.mysql_repo import MySQLRepo
 
 
 class MySQLService:

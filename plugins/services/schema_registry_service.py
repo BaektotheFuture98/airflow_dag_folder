@@ -1,4 +1,4 @@
-from app.repositories.schema_registry_repo import SchemaRegistryRepo
+from plugins.repositories.schema_registry_repo import SchemaRegistryRepo
 
 class SchemaRegistryService : 
     def __init__(self, schema_registry : SchemaRegistryRepo) : 

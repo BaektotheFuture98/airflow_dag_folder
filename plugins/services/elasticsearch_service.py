@@ -1,7 +1,7 @@
-from app.repositories.elasticsearch_repo import ElasticsearchRepo
+from plugins.repositories.elasticsearch_repo import ElasticsearchRepo
 from datetime import datetime, timezone
-from app.config.logger import get_logger
-from app.config.elasticsearch_index import create_index_with_copied_mapping_FINAL
+from plugins.config.logger import get_logger
+from plugins.config.elasticsearch_index import create_index_with_copied_mapping_FINAL
 
 log = get_logger(__name__)
 

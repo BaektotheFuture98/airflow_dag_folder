@@ -1,7 +1,7 @@
-from app.repositories.kafka_connect_repo import KafkaConnectRepo
-from app.models.build_models import build_jdbc_sink_config, build_es_sink_connector_config
+from plugins.repositories.kafka_connect_repo import KafkaConnectRepo
+from plugins.models.build_models import build_jdbc_sink_config, build_es_sink_connector_config
 from typing import List
-from app.config.logger import get_logger
+from plugins.config.logger import get_logger
 
 log = get_logger(__name__)
 
