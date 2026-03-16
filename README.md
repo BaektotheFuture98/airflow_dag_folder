@@ -1,47 +1,52 @@
 # Auto Pipeline (Airflow DAGs)
 
-이 리포지토리는 Elasticsearch ↔ Kafka ↔ MySQL 간 데이터 파이프라인을 Airflow TaskFlow API로 구현한 DAG들의 모음입니다. 두 개의 주요 DAG이 있으며, 스키마 레지스트리/카프카 커넥트/Elasticsearch 인덱스 생성까지 자동화합니다.
+이 리포지토리는 Elasticsearch, Kafka, MySQL 간 데이터 파이프라인을 Airflow TaskFlow API로 구현합니다. 현재 구조는 Airflow 관례에 맞춰 `dags/`는 orchestration만 두고, 일반 애플리케이션 코드는 `pipeline/` 패키지로 분리해 두었습니다.
 
 **핵심 기능**
 - Elasticsearch → Kafka → MySQL 파이프라인(`mysql_pipeline_dag`)
 - Elasticsearch → Kafka → Elasticsearch 파이프라인(`elasticsearch_pipeline_dag`)
-- Avro 스키마 자동 생성/등록(Confluent Schema Registry)
+- Avro 스키마 자동 생성 및 Schema Registry 등록
 - Kafka Connect JDBC/Elasticsearch Sink 커넥터 자동 생성
-- Elasticsearch 인덱스 복제 및 매핑 정제 후 대상 인덱스 생성
-- 진행 상태(`spark_task` 테이블) 업데이트
+- Elasticsearch 인덱스 복제 및 매핑 정제
+- 진행 상태(`spark_task`) 업데이트
 
-**폴더 구조**
-- [app/es_pipe.py](app/es_pipe.py): `elasticsearch_pipeline_dag` 정의
-- [app/mysql_pipe.py](app/mysql_pipe.py): `mysql_pipeline_dag` 정의
-- [app/tasks/elasticsearch_tasks.py](app/tasks/elasticsearch_tasks.py): ES→Kafka→ES TaskFlow 작업들
-- [app/tasks/mysql_tasks.py](app/tasks/mysql_tasks.py): ES→Kafka→MySQL TaskFlow 작업들
-- [app/models/build_models.py](app/models/build_models.py): 스키마/커넥터 설정 빌더
-- [app/services/*](app/services): 비즈니스 로직 서비스 레이어
-- [app/repositories/*](app/repositories): 외부 시스템 접근 레포지토리 레이어
-- [app/config/elasticsearch_index.py](app/config/elasticsearch_index.py): 인덱스 복제/생성 유틸리티
-- [app/config/logger.py](app/config/logger.py): 통일된 로깅 설정
-- [pyproject.toml](pyproject.toml), [requirements.txt](requirements.txt): 의존성 관리
+**권장 폴더 구조**
+- [dags/mysql_pipe.py](dags/mysql_pipe.py): MySQL 대상 DAG 정의
+- [dags/es_pipe.py](dags/es_pipe.py): Elasticsearch 대상 DAG 정의
+- [pipeline/tasks/mysql_tasks.py](pipeline/tasks/mysql_tasks.py): Airflow TaskFlow task wrappers
+- [pipeline/tasks/elasticsearch_tasks.py](pipeline/tasks/elasticsearch_tasks.py): Airflow TaskFlow task wrappers
+- [pipeline/tasks/common.py](pipeline/tasks/common.py): task 공통 helper
+- [pipeline/services/elasticsearch_service.py](pipeline/services/elasticsearch_service.py): 비즈니스 로직
+- [pipeline/services/kafka_connect_service.py](pipeline/services/kafka_connect_service.py): 비즈니스 로직
+- [pipeline/repositories/elasticsearch_repo.py](pipeline/repositories/elasticsearch_repo.py): 외부 시스템 접근
+- [pipeline/repositories/mysql_repo.py](pipeline/repositories/mysql_repo.py): 외부 시스템 접근
+- [pipeline/domain/build_models.py](pipeline/domain/build_models.py): 설정/스키마 builder
+- [pipeline/config/logger.py](pipeline/config/logger.py): 로깅 설정
+- [pipeline/config/elasticsearch_index.py](pipeline/config/elasticsearch_index.py): 인덱스 복제 유틸리티
+- [pipeline/sql/queries/status.sql](pipeline/sql/queries/status.sql): SQL 리소스
+- [tests/test_mysql_pipeline_dag.py](tests/test_mysql_pipeline_dag.py): DAG/helper 테스트
+- [tests/test_elasticsearch_pipeline_dag.py](tests/test_elasticsearch_pipeline_dag.py): DAG/helper 테스트
 
 **아키텍처 개요**
-- Source: Elasticsearch 인덱스(검색/페이지네이션)
-- Transport: Kafka(Avro 직렬화, `SerializingProducer`)
-- Sink: MySQL(JDBC Sink Connector) 또는 Elasticsearch(ES Sink Connector)
-- Schema: Confluent Schema Registry(RecordNameStrategy)
-- Orchestrator: Airflow 3.x Task SDK(`@dag`, `@task`)
+- `dags/`: DAG 선언과 task wiring만 담당
+- `pipeline/tasks/`: Airflow task wrapper와 orchestration helper
+- `pipeline/services/`: 순수 비즈니스 로직
+- `pipeline/repositories/`: Elasticsearch, MySQL, Schema Registry, Kafka Connect 접근
+- `pipeline/domain/`: 설정 객체와 스키마 builder
+- `pipeline/config/`: 공통 설정과 로깅
+- `tests/`: DAG 구조와 helper 검증
 
 **주요 컴포넌트**
-- `ElasticsearchService`: 검색/청크 계산/인덱스 생성 래퍼. [app/services/elasticsearch_service.py](app/services/elasticsearch_service.py)
-- `KafkaConnectService`: JDBC/ES Sink 커넥터 생성 및 토픽 관리. [app/services/kafka_connect_service.py](app/services/kafka_connect_service.py)
-- `SchemaRegistryService`: 스키마 등록/조회. [app/services/schema_registry_service.py](app/services/schema_registry_service.py)
-- `MySQLService`: 상태 테이블(`spark_task`) 업데이트. [app/services/mysql_service.py](app/services/mysql_service.py)
+- `ElasticsearchService`: 검색, 청크 계산, 인덱스 생성 래퍼. [pipeline/services/elasticsearch_service.py](pipeline/services/elasticsearch_service.py)
+- `KafkaConnectService`: JDBC/ES Sink 커넥터 생성과 토픽 관리. [pipeline/services/kafka_connect_service.py](pipeline/services/kafka_connect_service.py)
+- `SchemaRegistryService`: 스키마 등록과 조회. [pipeline/services/schema_registry_service.py](pipeline/services/schema_registry_service.py)
+- `MySQLService`: 상태 테이블 업데이트. [pipeline/services/mysql_service.py](pipeline/services/mysql_service.py)
 
 **Airflow DAGs**
-- `mysql_pipeline_dag`([app/mysql_pipe.py](app/mysql_pipe.py))
-	- `mySQLTrigger` → `register_avro_schema` → `create_jdbc_sink_connector` → `search_and_publish_elasticsearch`
-	- ES에서 조회한 레코드를 Avro로 Kafka에 Publish → JDBC Sink가 MySQL 테이블로 적재
-- `elasticsearch_pipeline_dag`([app/es_pipe.py](app/es_pipe.py))
-	- `esTrigger` → `register_avro_schema` → `create_es_index` → `create_es_sink_connector` → `search_and_publish_elasticsearch`
-	- 대상 ES 인덱스 자동 생성 후 Kafka ES Sink로 적재
+- `mysql_pipeline_dag`([dags/mysql_pipe.py](dags/mysql_pipe.py))
+  `mySQLTrigger` → `register_avro_schema` → `create_jdbc_sink_connector` → `search_and_publish_elasticsearch`
+- `elasticsearch_pipeline_dag`([dags/es_pipe.py](dags/es_pipe.py))
+  `esTrigger` → `register_avro_schema` → `create_es_index` → `create_es_sink_connector` → `search_and_publish_elasticsearch`
 
 **필수 Airflow Variables**
 - `ELASTICSEARCH_HOSTS`: 예 `http://host1:9200,http://host2:9200`

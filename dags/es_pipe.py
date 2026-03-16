@@ -1,31 +1,29 @@
 from datetime import datetime, timezone
+
 from airflow.sdk import dag
 
-# TaskFlow API tasks from core_tasks
-from plugins.tasks.elasticsearch_tasks import (
-	esTrigger,
-	register_avro_schema,
+from pipeline.tasks.elasticsearch_tasks import (
     create_es_index,
-	create_es_sink_connector,
-	search_and_publish_elasticsearch,
+    create_es_sink_connector,
+    esTrigger,
+    register_avro_schema,
+    search_and_publish_elasticsearch,
 )
 
 @dag(
-    dag_id = "elasticsearch_pipeline_dag",
-    schedule = None, 
+    dag_id="elasticsearch_pipeline_dag",
+    schedule=None,
     start_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
     catchup=False,
-    doc_md = """
-    MySQL to Kafka to MySQL Pipeline DAG
-    """
+    doc_md="Elasticsearch to Kafka to Elasticsearch pipeline DAG.",
 )
 def elasticsearch_pipeline_dag():
-    esTrigger_task = esTrigger()
-    schema_info = register_avro_schema(esTrigger_task)
+    es_trigger = esTrigger()
+    schema_info = register_avro_schema(es_trigger)
     es_index_info = create_es_index(schema_info)
     es_sink_info = create_es_sink_connector(es_index_info)
-    es_result = search_and_publish_elasticsearch(es_sink_info)
-    
-    esTrigger_task >> schema_info >> es_index_info >> es_sink_info >> es_result
+    publish_result = search_and_publish_elasticsearch(es_sink_info)
+
+    es_trigger >> schema_info >> es_index_info >> es_sink_info >> publish_result
 
 elasticsearch_pipeline_dag()

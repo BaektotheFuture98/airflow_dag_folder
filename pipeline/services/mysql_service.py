@@ -1,5 +1,5 @@
 
-from plugins.repositories.mysql_repo import MySQLRepo
+from pipeline.repositories.mysql_repo import MySQLRepo
 
 
 class MySQLService:
