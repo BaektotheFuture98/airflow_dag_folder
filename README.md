@@ -1,7 +1,5 @@
 # Auto Pipeline (Airflow DAGs)
 
-## 이 코드가 뭘 하는 건가요?
-
 이 저장소는 **Elasticsearch 데이터를 다른 저장소로 이관/적재**하기 위한 Airflow DAG 프로젝트입니다.
 
 - 목적: Elasticsearch 검색 결과를 Kafka로 발행하고, 최종적으로 MySQL 또는 Elasticsearch에 적재
