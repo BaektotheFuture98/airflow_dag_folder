@@ -23,19 +23,19 @@ class TestMySQLPipelineDAG:
         dag = mysql_pipeline_dag()
         task_ids = [task.task_id for task in dag.tasks]
         assert task_ids == [
-            "mySQLTrigger",
+            "mysql_trigger",
             "register_avro_schema",
-            "create_jdbc_sink_connector",
-            "search_and_publish_elasticsearch",
+            "create_jdbc_sink_connectors",
+            "publish_elasticsearch_documents_to_kafka",
         ]
 
     def test_dag_dependencies(self):
         dag = mysql_pipeline_dag()
         tasks = {task.task_id: task for task in dag.tasks}
 
-        assert tasks["register_avro_schema"].upstream_task_ids == {"mySQLTrigger"}
-        assert tasks["create_jdbc_sink_connector"].upstream_task_ids == {"register_avro_schema"}
-        assert tasks["search_and_publish_elasticsearch"].upstream_task_ids == {"create_jdbc_sink_connector"}
+        assert tasks["register_avro_schema"].upstream_task_ids == {"mysql_trigger"}
+        assert tasks["create_jdbc_sink_connectors"].upstream_task_ids == {"register_avro_schema"}
+        assert tasks["publish_elasticsearch_documents_to_kafka"].upstream_task_ids == {"create_jdbc_sink_connectors"}
 
 
 class TestMySQLTaskHelpers:

@@ -23,21 +23,21 @@ class TestElasticsearchPipelineDAG:
         dag = elasticsearch_pipeline_dag()
         task_ids = [task.task_id for task in dag.tasks]
         assert task_ids == [
-            "esTrigger",
+            "es_trigger",
             "register_avro_schema",
-            "create_es_index",
-            "create_es_sink_connector",
-            "search_and_publish_elasticsearch",
+            "create_elasticsearch_index",
+            "create_elasticsearch_sink_connector",
+            "publish_elasticsearch_documents_to_kafka",
         ]
 
     def test_dag_dependencies(self):
         dag = elasticsearch_pipeline_dag()
         tasks = {task.task_id: task for task in dag.tasks}
 
-        assert tasks["register_avro_schema"].upstream_task_ids == {"esTrigger"}
-        assert tasks["create_es_index"].upstream_task_ids == {"register_avro_schema"}
-        assert tasks["create_es_sink_connector"].upstream_task_ids == {"create_es_index"}
-        assert tasks["search_and_publish_elasticsearch"].upstream_task_ids == {"create_es_sink_connector"}
+        assert tasks["register_avro_schema"].upstream_task_ids == {"es_trigger"}
+        assert tasks["create_elasticsearch_index"].upstream_task_ids == {"register_avro_schema"}
+        assert tasks["create_elasticsearch_sink_connector"].upstream_task_ids == {"create_elasticsearch_index"}
+        assert tasks["publish_elasticsearch_documents_to_kafka"].upstream_task_ids == {"create_elasticsearch_sink_connector"}
 
 
 class TestElasticsearchTaskHelpers:

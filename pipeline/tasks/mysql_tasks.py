@@ -20,8 +20,8 @@ log = get_logger(__name__)
 
 
 @task(doc_md="API 수신 완료, 설정 파일 구성")
-def mySQLTrigger(**kwargs) -> dict[str, Any]:
-    info = get_dag_run_conf(kwargs, "mySQLTrigger")
+def mysql_trigger(**kwargs) -> dict[str, Any]:
+    info = get_dag_run_conf(kwargs, "mysql_trigger")
     es_service = get_default_elasticsearch_service()
 
     es_source_config = build_es_source_model(
@@ -74,7 +74,7 @@ def register_avro_schema(info: dict[str, Any]) -> dict[str, Any]:
 
 
 @task(doc_md="JdbcSinkConnector 생성")
-def create_jdbc_sink_connector(info: dict[str, Any]) -> dict[str, Any]:
+def create_jdbc_sink_connectors(info: dict[str, Any]) -> dict[str, Any]:
     kafka_connect_service = KafkaConnectService(KafkaConnectRepo(Variable.get("KAFKA_CONNECT")))
     mysql_config = info["mysql_config"]
 
@@ -96,5 +96,5 @@ def create_jdbc_sink_connector(info: dict[str, Any]) -> dict[str, Any]:
 
 
 @task(doc_md="Elasticsearch 데이터 조회 및 전송")
-def search_and_publish_elasticsearch(info: dict[str, Any]) -> dict[str, Any]:
+def publish_elasticsearch_documents_to_kafka(info: dict[str, Any]) -> dict[str, Any]:
     return publish_elasticsearch_documents(info=info, topics=info["topic_list"])

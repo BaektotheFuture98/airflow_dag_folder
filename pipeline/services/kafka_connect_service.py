@@ -15,7 +15,7 @@ class KafkaConnectService() :
         self.connect_client.create_connector(build_jdbc_sink_config(service_name, mysql_config))
         self.topic_list.append(service_name)
         
-    def create_es_sink_connector(self, es_config:dict) :
+    def create_elasticsearch_sink_connector(self, es_config:dict) :
         response = self.connect_client.create_connector(build_es_sink_connector_config(es_config))
 
 

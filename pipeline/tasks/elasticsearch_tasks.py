@@ -19,8 +19,8 @@ log = get_logger(__name__)
 
 
 @task(doc_md="API 수신 완료, 설정 파일 구성")
-def esTrigger(**kwargs) -> dict[str, Any]:
-    info = get_dag_run_conf(kwargs, "esTrigger")
+def es_trigger(**kwargs) -> dict[str, Any]:
+    info = get_dag_run_conf(kwargs, "es_trigger")
 
     es_source_config = build_es_source_model(
         project_name=info.get("project_name"),
@@ -62,7 +62,7 @@ def register_avro_schema(info: dict[str, Any]) -> dict[str, Any]:
 
 
 @task(doc_md="Elasticsearch Index 생성")
-def create_es_index(info: dict[str, Any]) -> dict[str, Any]:
+def create_elasticsearch_index(info: dict[str, Any]) -> dict[str, Any]:
     es_service = get_target_elasticsearch_service(info["es_target_config"])
     source_index = info["es_source_config"]["es_source_index"]
     target_index = info["es_target_config"]["es_target_index"]
@@ -75,14 +75,14 @@ def create_es_index(info: dict[str, Any]) -> dict[str, Any]:
 
 
 @task(doc_md="elasticsearch_sink_connector 생성")
-def create_es_sink_connector(info: dict[str, Any]) -> dict[str, Any]:
+def create_elasticsearch_sink_connector(info: dict[str, Any]) -> dict[str, Any]:
     kafka_connect_service = KafkaConnectService(KafkaConnectRepo(Variable.get("KAFKA_CONNECT")))
-    kafka_connect_service.create_es_sink_connector(es_config=info["es_target_config"])
+    kafka_connect_service.create_elasticsearch_sink_connector(es_config=info["es_target_config"])
     log.info("Created Elasticsearch sink connector for index=%s", info["es_target_config"]["es_target_index"])
     return info
 
 
 @task(doc_md="Elasticsearch 데이터 조회 및 전송")
-def search_and_publish_elasticsearch(info: dict[str, Any]) -> dict[str, Any]:
+def publish_elasticsearch_documents_to_kafka(info: dict[str, Any]) -> dict[str, Any]:
     topic = info["es_target_config"]["es_target_index"]
     return publish_elasticsearch_documents(info=info, topics=[topic], key_field="kw_docid")
